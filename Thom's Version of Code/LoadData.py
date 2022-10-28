@@ -65,3 +65,5 @@ def main():
     plotData(EQ_Data, SO2_Data)
     print("egg")
     return
+
+main()
