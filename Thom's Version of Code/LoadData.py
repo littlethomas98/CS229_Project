@@ -53,7 +53,8 @@ def pullOnlyEventDates(EQ_Data, SO2_Data):
     return 
 
 def plotData(EQ_Data, SO2_Data):
-    
+    EQ_Data.to_csv('EQ_Data.csv')
+    SO2_Data.to_csv('SO2_Data.csv')
     return
 
 def main():
@@ -61,5 +62,6 @@ def main():
     EQ_Data = loadEQData()
     convertDateFormat(EQ_Data, SO2_Data)
     # pullOnlyEventDates(EQ_Data, SO2_Data)
+    plotData(EQ_Data, SO2_Data)
     print("egg")
     return
