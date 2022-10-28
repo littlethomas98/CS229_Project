@@ -52,8 +52,8 @@ def plotData(EQ_Data, SO2_Data):
     ax1.set_title('Relationship Between SO2 Concentration and EQ Event')
 
     #Scale relative magnitude of SO2 concentration and EQ magnitude 
-    #   Note that EQ scale is exponentially scaled, this is due to the natrual 
-    #   phenomenon of earthquake
+    #   Note that EQ scale is exponentially scaled, this is because the moment magnitude 
+    #   scale used to evaluate eartquakes is logrithmic in nature.
     SO2Scale = 0.0015
     EQScale = -2
     DayAdjustment = 80
