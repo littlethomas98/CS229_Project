@@ -28,6 +28,18 @@ for i, data in enumerate(EQ_Data['time']):
 
 SO2_Data['Date'] = SO2_Dates
 EQ_Data['time'] = EQ_Dates
+
+minLengthDataSet = min(len(EQ_Data['time']), len(SO2_Data['time']))
+if len(EQ_Data['time']) < len(SO2_Data['time']):
+    DataShort = EQ_Data['time']
+    DataLong = SO2_Data['time']
+else: 
+    DataShort = SO2_Data['time']
+    DataLong = EQ_Data['time']
+
+for i in range(len(DataShort)):
+    
+
 print("egg1")
 
 
