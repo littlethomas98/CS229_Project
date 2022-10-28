@@ -4,17 +4,17 @@ import os
 # import tensorflow as tf
 
 # Load SO2 Data
-SO2_datafiles = os.listdir('SO2 Data')
+SO2_datafiles = os.listdir('../SO2 Data')
 SO2data = dict()
 for filename in SO2_datafiles:
-    SO2data[f'df_{filename}'] = pd.read_csv(f'SO2 Data/{filename}')
+    SO2data[f'df_{filename}'] = pd.read_csv(f'../SO2 Data/{filename}')
 SO2_Data = pd.concat(SO2data)
 
 # Load EQ Data
-EQ_datafiles = os.listdir('EQ Data')
+EQ_datafiles = os.listdir('../EQ Data')
 EQdata = dict()
 for filename in EQ_datafiles:
-    EQdata[f'df_{filename}'] = pd.read_csv(f'EQ Data/{filename}')
+    EQdata[f'df_{filename}'] = pd.read_csv(f'../EQ Data/{filename}')
 EQ_Data = pd.concat(EQdata)
 
 #Convert Dates to Same Format
@@ -29,10 +29,10 @@ for i, data in enumerate(EQ_Data['time']):
 SO2_Data['Date'] = SO2_Dates
 EQ_Data['time'] = EQ_Dates
 
-minLengthDataSet = min(len(EQ_Data['time']), len(SO2_Data['time']))
-if len(EQ_Data['time']) < len(SO2_Data['time']):
+minLengthDataSet = min(len(EQ_Data['time']), len(SO2_Data['Date']))
+if len(EQ_Data['time']) < len(SO2_Data['Date']):
     DataShort = EQ_Data['time']
-    DataLong = SO2_Data['time']
+    DataLong = SO2_Data['Date']
 else: 
     DataShort = SO2_Data['time']
     DataLong = EQ_Data['time']
@@ -40,6 +40,6 @@ else:
 for i in range(len(DataShort)):
     
 
-print("egg1")
+    print("egg1")
 
 
