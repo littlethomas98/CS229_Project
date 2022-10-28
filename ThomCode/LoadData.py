@@ -44,17 +44,31 @@ def cleanData(EQ_Data, SO2_Data):
 
 #Merge SO2 and EQ data into single dataframe 
 def mergeData(EQ_Data, SO2_Data):
-
     MergedData = SO2_Data.merge(EQ_Data, how = 'left', on = 'Date')
     MergedData.rename(columns={'SITE_LATITUDE' : 'SO2_lat', 'SITE_LONGITUDE' : 'SO2_long', 'latitude' : 'EQ_lat', 'longitude' : 'EQ_long'}, inplace=True) 
-    
+    MergedData['mag'].fillna(0, inplace = True)
+    return MergedData
+
+def replaceLatLongwithDistance(MergedData):
+    #Convert degrees to radians
+    lat1 = MergedData['SO2_lat'] / 57.29577951
+    long1 = MergedData['SO2_long'] / 57.29577951
+    lat2 = MergedData['EQ_lat'] / 57.29577951
+    long2 = MergedData['EQ_long'] / 57.29577951
+
+    #Calculate distance in miles
+    distance = 3963.0 * np.arccos((np.sin(lat1) * np.sin(lat2)) + np.cos(lat1) * np.cos(lat2) * np.cos(long2 - long1))
+
+    MergedData['Distance'] = distance
+    MergedData.drop(['SO2_lat', 'SO2_long', 'EQ_lat', 'EQ_long'], axis = 1, inplace = True)
     return MergedData
 
 #Save relavent output data
-def saveData(EQ_Data, SO2_Data, MergedData):
+def saveData(EQ_Data, SO2_Data, MergedData, CleanMergedData):
     EQ_Data.to_csv('EQ_Data.csv')
     SO2_Data.to_csv('SO2_Data.csv')
     MergedData.to_csv('MergedData.csv')
+    CleanMergedData.to_csv('CleanMergedData.csv')
     return 
 
 #Plot SO2 concentrations and EQ magnitudes
@@ -88,10 +102,11 @@ def main():
     #Clean and Merge Data
     EQ_Data, SO2_Data = cleanData(EQ_Data, SO2_Data)
     MergedData = mergeData(EQ_Data, SO2_Data)
+    CleanMergedData = replaceLatLongwithDistance(MergedData)
 
     #Save and Plot Data
-    # saveData(EQ_Data, SO2_Data)
-    # plotData(MergedData)
+    saveData(EQ_Data, SO2_Data, MergedData, CleanMergedData)
+    plotData(MergedData)
 
     return
 
