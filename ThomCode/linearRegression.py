@@ -52,6 +52,12 @@ for epoch in range(num_epochs):
 
 #Plot
 predicted = model(X).detach().numpy()
+fig = plt.figure()
+ax1 = fig.add_subplot()
 plt.plot(X_numpy, y_numpy, 'o')
+
 plt.plot(X_numpy, predicted)
+ax1.set_xlabel('Earthquake Magnitude')
+ax1.set_ylabel('SO2 Concentraion')
+ax1.set_title('Linear Regression Model btw EQ Magnitude and SO2 concentration')
 plt.show()
