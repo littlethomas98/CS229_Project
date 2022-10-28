@@ -1,4 +1,3 @@
-from turtle import shape
 import torch
 import torch.nn as nn
 import pandas as pd
