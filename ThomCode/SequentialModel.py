@@ -9,16 +9,60 @@ import os
 
 os.chdir('../CS229_Project/ThomCode')
 
+def main():
+    """
+    Function: createModel
+        This function creates a Sequential TensorFlow model
+
+    Parameters: none
+
+    Returns:    model - an untrained sequential TensorFlow model
+    """   
+    data = importData()
+    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
+    model = trainModel(mag_train, so2_train, mag_valid, so2_valid)
+    testModel(model, mag_test, so2_test)
+    return
+
+main()
+
+
 def importData():
+    """
+    Function: importData
+        This function loads all realizations from files
+
+    Parameters: none
+
+    Returns:    data - a numpy array of all data
+    """
+    
     data = pd.read_csv('CleanMergedData.csv')
     data = data.to_numpy()
     return data
 
-def splitData(data, splitFrac = 0.7):
+
+def splitData(data, train_Frac = 0.7):
+    """
+    Function: splitData
+        This function splits the data into training, validation, and testing sets.
+
+    Parameters: data - a numpy array of all data
+                train_Frac - the fraction of data that you would like to be training data (the test and validation 
+                             sets will be evenly split between the remaining data)
+
+
+    Returns:    x_train - training data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
+                y_train - training data outputs (SO2 concentration)
+                x_valid - validation data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
+                y_valid - validation data outputs (SO2 concentration)
+                x_test - testing data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
+                y_test - testing data outputs (SO2 concentration)
+    """
     data = shuffle(data, random_state = 4)
     data = data[~np.isnan(data).any(axis=1)]
 
-    train_len  = int(data.shape[0] * splitFrac)
+    train_len  = int(data.shape[0] * train_Frac)
     valid_len = train_len + int((data.shape[0] - train_len) / 2)
 
     data_train = data[0:train_len, :]
@@ -35,7 +79,16 @@ def splitData(data, splitFrac = 0.7):
 
     return mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test
 
+
 def createModel():
+    """
+    Function: createModel
+        This function creates a Sequential TensorFlow model
+
+    Parameters: none
+
+    Returns:    model - an untrained sequential TensorFlow model
+    """    
     model = keras.Sequential()
     model.add(tf.keras.Input(shape = (2,)))
     model.add(layers.Dense(units = 64, activation = 'relu'))
@@ -46,8 +99,20 @@ def createModel():
 
     return model
 
+
 def trainModel(x_train, y_train, x_valid, y_valid):
-    #Create an instance of the model
+    """
+    Function: trainModel
+        This function trains the Sequential TensorFlow model on the provided training set
+
+    Parameters: x_train - training data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
+                y_train - training data outputs (SO2 concentration)
+                x_valid - validation data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
+                y_valid - validation data outputs (SO2 concentration)
+
+    Returns:    model - a trained sequential TensorFlow model
+    """ 
+
     model = createModel()
     model.compile(
         optimizer = keras.optimizers.Adam(),
@@ -66,7 +131,18 @@ def trainModel(x_train, y_train, x_valid, y_valid):
 
     return model
 
+
 def testModel(model, x_test, y_test):
+    """
+    Function: testModel
+        This function trains the Sequential TensorFlow model on the provided training set
+
+    Parameters: x_test - testing data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
+                y_test - testing data outputs (SO2 concentration)
+
+    Returns:    none
+    """
+
     #Evaluate the model on the test data
     print("Evaluate on test data")
     results = model.evaluate(x_test, y_test, batch_size=64)
@@ -96,13 +172,4 @@ def testModel(model, x_test, y_test):
     plt.savefig('Predictions.png')
     plt.show()
 
-    return predictions
-
-def main():
-    data = importData()
-    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
-    model = trainModel(mag_train, so2_train, mag_valid, so2_valid)
-    testModel(model, mag_test, so2_test)
-    return
-
-main()
+    return 
