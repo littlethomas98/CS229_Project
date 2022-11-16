@@ -74,8 +74,26 @@ def testModel(model, x_test, y_test):
 
     print("Generate predictions")
     predictions = model.predict(x_test)
-    plt.plot(x_test, y_test, 'bo', alpha = 0.2)
-    plt.plot(x_test, predictions, 'ro', alpha = 0.2)
+
+    #Plot read data
+    fig = plt.figure()
+    ax = fig.add_subplot(projection = '3d')
+    ax.scatter(x_test[:,0], x_test[:,1], y_test, label = 'Real Data')
+
+    #Plot read data
+    ax.scatter(x_test[:,0], x_test[:,1], predictions)
+    ax.set_xlabel('EQ Magnitude')
+    ax.set_ylabel('Distance (km)')
+    ax.set_zlabel('SO2 Concentration (ppm)')
+
+    #Determined that 3rd dimension is not relavent for current analysis, therefore reduce to 2d plot
+    plt.figure()
+    line1, line2 = plt.plot(x_test, y_test, 'bo', alpha = 0.2)
+    line3, line4 = plt.plot(x_test, predictions, 'ro', alpha = 0.2, label = 'Predicted Data')
+    plt.legend([line1, line3], ['Real Data', 'Predicted Data'], loc='best')
+    plt.xlabel('Distance (km)')
+    plt.ylabel('SO2 Concentration (ppm)')
+    plt.savefig('Predictions.png')
     plt.show()
 
     return predictions
