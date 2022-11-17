@@ -9,24 +9,6 @@ import os
 
 os.chdir('../CS229_Project/ThomCode')
 
-def main():
-    """
-    Function: createModel
-        This function creates a Sequential TensorFlow model
-
-    Parameters: none
-
-    Returns:    model - an untrained sequential TensorFlow model
-    """   
-    data = importData()
-    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
-    model = trainModel(mag_train, so2_train, mag_valid, so2_valid)
-    testModel(model, mag_test, so2_test)
-    return
-
-main()
-
-
 def importData():
     """
     Function: importData
@@ -173,3 +155,20 @@ def testModel(model, x_test, y_test):
     plt.show()
 
     return 
+
+def main():
+    """
+    Function: createModel
+        This function creates a Sequential TensorFlow model
+
+    Parameters: none
+
+    Returns:    model - an untrained sequential TensorFlow model
+    """   
+    data = importData()
+    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
+    model = trainModel(mag_train, so2_train, mag_valid, so2_valid)
+    testModel(model, mag_test, so2_test)
+    return
+
+main()
