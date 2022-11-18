@@ -9,6 +9,22 @@ import os
 
 os.chdir('../CS229_Project/ThomCode')
 
+def main():
+    """
+    Function: createModel
+        This function creates a Sequential TensorFlow model
+
+    Parameters: none
+
+    Returns:    model - an untrained sequential TensorFlow model
+    """   
+    data = importData()
+    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
+    biasVar(mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test)
+    # model, _ = trainModel(mag_train, so2_train, mag_valid, so2_valid)
+    # testModel(model, mag_test, so2_test)
+    return
+
 def importData():
     """
     Function: importData
@@ -41,7 +57,7 @@ def splitData(data, train_Frac = 0.7):
                 x_test - testing data inputs (EQ magnitude and distrance between EQ epicenter and SO2 recording)
                 y_test - testing data outputs (SO2 concentration)
     """
-    data = shuffle(data, random_state = 4)
+    data = shuffle(data, random_state = 2)
     data = data[~np.isnan(data).any(axis=1)]
 
     train_len  = int(data.shape[0] * train_Frac)
@@ -111,7 +127,20 @@ def trainModel(x_train, y_train, x_valid, y_valid):
         validation_data=(x_valid, y_valid),
     )
 
-    return model
+    finalLoss = [history.history['loss'][-1], history.history['val_loss'][-1]]
+
+    # #Plot train vs validation error
+    # trainLoss = history.history['loss']
+    # validLoss = history.history['val_loss']
+    # plt.plot(trainLoss, label='Train')
+    # plt.plot(validLoss, label='Validation')
+    # plt.xlabel('epoch')
+    # plt.ylabel('loss')
+    # plt.title('Model Loss')
+    # plt.legend(loc = 'best')
+    # plt.show()
+
+    return model, finalLoss
 
 
 def testModel(model, x_test, y_test):
@@ -129,46 +158,66 @@ def testModel(model, x_test, y_test):
     print("Evaluate on test data")
     results = model.evaluate(x_test, y_test, batch_size=64)
     print("test loss, test acc:", results)
-
     print("Generate predictions")
     predictions = model.predict(x_test)
 
-    #Plot read data
-    fig = plt.figure()
-    ax = fig.add_subplot(projection = '3d')
-    ax.scatter(x_test[:,0], x_test[:,1], y_test, label = 'Real Data')
+    # #Plot 3D data
+    # fig = plt.figure()
+    # ax = fig.add_subplot(projection = '3d')
+    # ax.scatter(x_test[:,0], x_test[:,1], y_test, label = 'Real Data')
+    # ax.scatter(x_test[:,0], x_test[:,1], predictions)
+    # ax.set_xlabel('EQ Magnitude')
+    # ax.set_ylabel('Distance (km)')
+    # ax.set_zlabel('SO2 Concentration (ppm)')
 
-    #Plot read data
-    ax.scatter(x_test[:,0], x_test[:,1], predictions)
-    ax.set_xlabel('EQ Magnitude')
-    ax.set_ylabel('Distance (km)')
-    ax.set_zlabel('SO2 Concentration (ppm)')
+    # #Determined that 3rd dimension is not relavent for current analysis, therefore reduce to 2d plot
+    # plt.figure()
+    # line1, line2 = plt.plot(x_test, y_test, 'bo', alpha = 0.2)
+    # line3, line4 = plt.plot(x_test, predictions, 'ro', alpha = 0.2, label = 'Predicted Data')
+    # plt.legend([line1, line3], ['Real Data', 'Predicted Data'], loc='best')
+    # plt.xlabel('Distance (km)')
+    # plt.ylabel('SO2 Concentration (ppm)')
+    # plt.savefig('Predictions.png')
 
-    #Determined that 3rd dimension is not relavent for current analysis, therefore reduce to 2d plot
-    plt.figure()
-    line1, line2 = plt.plot(x_test, y_test, 'bo', alpha = 0.2)
-    line3, line4 = plt.plot(x_test, predictions, 'ro', alpha = 0.2, label = 'Predicted Data')
-    plt.legend([line1, line3], ['Real Data', 'Predicted Data'], loc='best')
-    plt.xlabel('Distance (km)')
-    plt.ylabel('SO2 Concentration (ppm)')
-    plt.savefig('Predictions.png')
-    plt.show()
+    #Plugin to visualize model
+    # keras.utils.plot_model(
+    #     model,
+    #     to_file='ModelPlot.png',
+    #     show_shapes=True,
+    #     show_dtype=False,
+    #     show_layer_names=True,
+    #     rankdir='TB',
+    #     expand_nested=False,
+    #     dpi=96,
+    #     layer_range=None,
+    #     show_layer_activations=False
+    # )
 
-    return 
+    return results
+    
+def biasVar(mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test):
+    trainHist = np.zeros([10,2])
+    testHist = np.zeros(10)
+    for i in range(1,11):
+        mag_train_sec = mag_train[0:int(i/10 * mag_train.shape[0]),:]
+        so2_train_sec = so2_train[0:int(i/10 * so2_train.shape[0])]
+        mag_valid_sec = mag_valid[0:int(i/10 * mag_valid.shape[0]),:]
+        so2_valid_sec = so2_valid[0:int(i/10 * so2_valid.shape[0])]
+        mag_test_sec = mag_test[0:int(i/10 * mag_test.shape[0]),:]
+        so2_test_sec = so2_test[0:int(i/10 * so2_test.shape[0])]
+        model, trainLoss = trainModel(mag_train_sec, so2_train_sec, mag_valid_sec, so2_valid_sec)
+        results = testModel(model, mag_test_sec, so2_test_sec)
+        trainHist[i-1] = trainLoss
+        testHist[i-1] = results
 
-def main():
-    """
-    Function: createModel
-        This function creates a Sequential TensorFlow model
+    plt.plot(np.linspace(0.1,1,10),trainHist)
+    plt.plot(np.linspace(0.1,1,10),testHist)
+    plt.legend(['Train', 'Validation', 'Test'], loc='best')
+    plt.title('Train and Test Loss vs. Dataset Size')
+    plt.xlabel('Dataset Size (%)')
+    plt.ylabel('Loss')
+    plt.savefig('BiasVarStudy.png')
 
-    Parameters: none
-
-    Returns:    model - an untrained sequential TensorFlow model
-    """   
-    data = importData()
-    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
-    model = trainModel(mag_train, so2_train, mag_valid, so2_valid)
-    testModel(model, mag_test, so2_test)
     return
 
 main()
