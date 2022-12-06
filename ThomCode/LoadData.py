@@ -3,34 +3,49 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+##TEMPORARY###############
+os.chdir(r"C:\Users\THom\Documents\GitHub\CS229_Project")
+##########################
+
+
 # Load SO2 Data
 def loadSO2Data():
-    SO2_datafiles = os.listdir('./SO2 Data')
+    SO2_datafiles = os.listdir('SO2 Data')
     SO2data = dict()
     for filename in SO2_datafiles:
-        SO2data[f'df_{filename}'] = pd.read_csv(f'./SO2 Data/{filename}')
+        if filename != 'SS':
+            SO2data[f'df_{filename}'] = pd.read_csv(f'SO2 Data/{filename}')
     SO2_Data = pd.concat(SO2data)
     return SO2_Data
 
+
 # Load EQ Data
 def loadEQData():
-    EQ_datafiles = os.listdir('./EQ Data')
+    EQ_datafiles = os.listdir('EQ Data')
     EQdata = dict()
     for filename in EQ_datafiles:
-        EQdata[f'df_{filename}'] = pd.read_csv(f'./EQ Data/{filename}')
+        if filename != 'SS':
+            EQdata[f'df_{filename}'] = pd.read_csv(f'EQ Data/{filename}')
     EQ_Data = pd.concat(EQdata)
     return EQ_Data
+
+
+def loadWeatherData():
+    weatherData = pd.read_csv('Weather Data/MLO Data.csv')
+    weatherData = weatherData.drop(columns = ['Unnamed: 0','YEAR','MONTH','DAY','HOUR','MINUTE'])
+    return weatherData
+
 
 #Convert Dates to Same Format and Remove Unnecessary Data
 def cleanData(EQ_Data, SO2_Data):
     SO2_Dates = np.zeros(len(SO2_Data['Date']))
     for i, data in enumerate(SO2_Data['Date']):
-        SO2_Dates[i] = int(data[0:2])*30 + int(data[3:5]) + (int(data[6:10])-2000)*365
+        SO2_Dates[i] = str(int(data[0:2])) + str(int(data[6:10])) + str(int(data[3:5]))
         # SO2_Dates[i] = data[0:2] + data[3:5] + data[6:10]
 
     EQ_Dates = np.zeros(len(EQ_Data['time']))
     for i, data in enumerate(EQ_Data['time']):
-        EQ_Dates[i] = int(data[5:7])*30 + int(data[8:10]) + (int(data[0:4])-2000)*365
+        EQ_Dates[i] = str(int(data[5:7])) + str(int(data[0:4])) + str(int(data[8:10]))
         # EQ_Dates[i] = data[5:7] + data[8:10] + data[0:4]
 
     SO2_Data['Date'] = SO2_Dates
@@ -42,12 +57,22 @@ def cleanData(EQ_Data, SO2_Data):
 
     return EQ_relaventData, SO2_relaventData
 
+#Convert date format to sequential for more readable plots
+def changeDateFormat(Data):
+    for i, data in enumerate(Data['Date']):
+        substring = str(data).split("2018")
+        Data['Date'][i] = (float(substring[0]) - 1) * (30) + float(substring[1])
+    return Data
+
 #Merge SO2 and EQ data into single dataframe 
-def mergeData(EQ_Data, SO2_Data):
+def mergeData(EQ_Data, SO2_Data, weatherData):
     MergedData = SO2_Data.merge(EQ_Data, how = 'left', on = 'Date')
+    MergedData = MergedData.groupby('Date').mean().reset_index()
+    MergedData = MergedData.merge(weatherData, how = 'left', on = 'Date')
     MergedData.rename(columns={'SITE_LATITUDE' : 'SO2_lat', 'SITE_LONGITUDE' : 'SO2_long', 'latitude' : 'EQ_lat', 'longitude' : 'EQ_long'}, inplace=True) 
     MergedData['mag'].fillna(0, inplace = True)
     return MergedData
+
 
 def replaceLatLongwithDistance(MergedData):
     #Convert degrees to radians
@@ -63,6 +88,7 @@ def replaceLatLongwithDistance(MergedData):
     MergedData.drop(['SO2_lat', 'SO2_long', 'EQ_lat', 'EQ_long'], axis = 1, inplace = True)
     return MergedData
 
+
 #Save relavent output data
 def saveData(EQ_Data, SO2_Data, MergedData, CleanMergedData):
     EQ_Data.to_csv('EQ_Data.csv')
@@ -70,6 +96,7 @@ def saveData(EQ_Data, SO2_Data, MergedData, CleanMergedData):
     MergedData.to_csv('MergedData.csv')
     CleanMergedData.to_csv('CleanMergedData.csv')
     return 
+
 
 #Plot SO2 concentrations and EQ magnitudes
 def plotData(MergedData):
@@ -94,15 +121,18 @@ def plotData(MergedData):
     plt.savefig('SO2_vs_EQ.png')
     return
 
+
 def main():
     #Load Data
     SO2_Data = loadSO2Data()
     EQ_Data = loadEQData()
+    Weather_Data = loadWeatherData()
 
     #Clean and Merge Data
     EQ_Data, SO2_Data = cleanData(EQ_Data, SO2_Data)
-    MergedData = mergeData(EQ_Data, SO2_Data)
+    MergedData = mergeData(EQ_Data, SO2_Data, Weather_Data)
     CleanMergedData = replaceLatLongwithDistance(MergedData)
+    CleanMergedData = changeDateFormat(CleanMergedData)
 
     #Save and Plot Data
     saveData(EQ_Data, SO2_Data, MergedData, CleanMergedData)
