@@ -9,26 +9,6 @@ import os
 
 os.chdir('../CS229_Project/ThomCode')
 
-def main(BiasVarStudy = False):
-    """
-    Function: createModel
-        This function creates a Sequential TensorFlow model
-
-    Parameters: BiasVarStudy - boolean value for whether to run a bias-variance study or
-                               whether to run typical model training
-
-    Returns:    model - an untrained sequential TensorFlow model
-    """   
-    data = importData()
-    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
-
-    #Conduct Bias Variance Study?
-    if BiasVarStudy:
-        biasVar(mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test)
-    else:
-        model, _ = trainModel(mag_train, so2_train, mag_valid, so2_valid)
-        testModel(model, mag_test, so2_test)
-    return
 
 def importData():
     """
@@ -41,7 +21,16 @@ def importData():
     """
     
     data = pd.read_csv('CleanMergedData.csv')
+
+    ##TODO TEMPORARY############################################
+    data.sort_values(by=['Date'], inplace=True)
+    plt.plot(data['Date'], data['Daily Max 1-hour SO2 Concentration'])
+    plt.plot(data['Date'], 10**data['mag']/100, 'ro', alpha=0.5)
+    plt.show()
+    ##############################################################################
+
     data = data.to_numpy()
+
     return data
 
 
@@ -83,7 +72,7 @@ def splitData(data, train_Frac = 0.7):
     return mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test
 
 
-def createModel():
+def createModel(InputShape):
     """
     Function: createModel
         This function creates a Sequential TensorFlow model
@@ -93,7 +82,7 @@ def createModel():
     Returns:    model - an untrained sequential TensorFlow model
     """    
     model = keras.Sequential()
-    model.add(tf.keras.Input(shape = (2,)))
+    model.add(tf.keras.Input(shape = (InputShape,)))
     model.add(layers.Dense(units = 64, activation = 'relu'))
     model.add(layers.Dense(units = 64, activation = 'relu'))
     model.add(layers.Dense(units = 64, activation = 'relu'))
@@ -116,7 +105,7 @@ def trainModel(x_train, y_train, x_valid, y_valid):
     Returns:    model - a trained sequential TensorFlow model
     """ 
 
-    model = createModel()
+    model = createModel(x_train.shape[1])
     model.compile(
         optimizer = keras.optimizers.Adam(),
         loss = keras.losses.MeanSquaredError(),
@@ -226,4 +215,25 @@ def biasVar(mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test):
 
     return
 
-main(BiasVarStudy=True)
+def main(BiasVarStudy = False):
+    """
+    Function: createModel
+        This function creates a Sequential TensorFlow model
+
+    Parameters: BiasVarStudy - boolean value for whether to run a bias-variance study or
+                               whether to run typical model training
+
+    Returns:    model - an untrained sequential TensorFlow model
+    """   
+    data = importData()
+    mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test = splitData(data)
+
+    #Conduct Bias Variance Study?
+    if BiasVarStudy:
+        biasVar(mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test)
+    else:
+        model, _ = trainModel(mag_train, so2_train, mag_valid, so2_valid)
+        testModel(model, mag_test, so2_test)
+    return
+
+main(BiasVarStudy=False)
