@@ -24,8 +24,23 @@ def importData():
 
     ##TODO TEMPORARY############################################
     data.sort_values(by=['Date'], inplace=True)
-    plt.plot(data['Date'], data['Daily Max 1-hour SO2 Concentration'])
-    plt.plot(data['Date'], 10**data['mag']/100, 'ro', alpha=0.5)
+
+    beta = 0.9
+    weightedAvg = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
+    for i in range(1,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
+        weightedAvg[i] = beta * weightedAvg[i-1] + (1-beta) * data['Daily Max 1-hour SO2 Concentration'][i]
+        
+    weightedAvg2 = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
+    avgDays = 30
+    for i in range(avgDays,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
+        weightedAvg2[i] = data['Daily Max 1-hour SO2 Concentration'][i-avgDays:i].mean()
+
+    # plt.plot(data['Date'], data['Daily Max 1-hour SO2 Concentration'])
+    # plt.plot(data['Date'], weightedAvg)
+    plt.plot(data['Date'], weightedAvg2/1000)
+    plt.plot(data['Date'], 7**data['mag']/20000, 'ro', alpha=0.5)
+    plt.ylim([0,0.5])
+    plt.xlim([734138,738155]) ##2011 to 2021
     plt.show()
     ##############################################################################
 

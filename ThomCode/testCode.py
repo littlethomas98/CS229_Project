@@ -28,9 +28,9 @@ df = pd.DataFrame(
      'Longitude': [-155.2834, -155.5922]}
 )
 
-ax = df.plot.scatter(
-    "Longitude", "Latitude", s=0.5, color='r'
-)
+# ax = df.plot.scatter(
+#     "Longitude", "Latitude", s=0.5, color='r'
+# )
 
 ghent_img, ghent_ext = cx.bounds2img(west,
                                      south,
@@ -40,16 +40,10 @@ ghent_img, ghent_ext = cx.bounds2img(west,
                                      source=cx.providers.Stamen.TerrainBackground
                                     )
 
-cx.add_basemap(
-    ax,
-    source = ghent_img
-)
-
-
-
-
-
-
+# cx.add_basemap(
+#     ax,
+#     source = ghent_img
+# )
 
 
 

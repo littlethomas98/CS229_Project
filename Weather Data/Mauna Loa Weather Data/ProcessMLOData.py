@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+import datetime
 import os
 
 ##TEMPORARY###############
@@ -11,7 +13,7 @@ os.chdir(r"C:\Users\THom\Documents\GitHub\CS229_Project")
 datafiles = os.listdir('Weather Data/Mauna Loa Weather Data')
 data = dict()
 for filename in datafiles:
-    if filename != 'SS' and filename != 'ProcessMLOData.py':
+    if filename != 'SS' and filename != 'ProcessMLOData.py' and filename != 'By Year':
         data[f'df_{filename}'] = pd.read_csv(f'Weather Data/Mauna Loa Weather Data/{filename}')
 data = pd.concat(data)
 data.rename(columns={'Column1': 'SITE CODE',
@@ -33,7 +35,19 @@ data.rename(columns={'Column1': 'SITE CODE',
 
 
 ##TAKE DAILY AVERAGES FOR COMPARISON TO OTHER DATA
-data['Date'] = data['MONTH'].astype(str) + data['YEAR'].astype(str) + data['DAY'].astype(str) #Weird order to remove duplicates (118 could be jan 18 or nov 8)
-data = data.groupby('Date').mean().reset_index()
+
+Combined_Dates = np.zeros(data.shape[0])
+for i in range (data.shape[0]):
+    month = data['MONTH'][i]
+    day = data['DAY'][i]
+    year = data['YEAR'][i]
+    
+    # Store dates as numbers
+    # YYYY-MM-DD
+    d = datetime.date(year, month, day)
+    Combined_Dates[i] = d.toordinal()
+
+
+data['Date'] = Combined_Dates
 data = data.drop(columns = ['WIND STEADINESS FACTOR'])
 data.to_csv('Weather Data/MLO Data.csv')
