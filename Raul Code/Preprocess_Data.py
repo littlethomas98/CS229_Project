@@ -34,6 +34,7 @@ def loadEQData():
 # Modified to be a code in case leap years exists
 def cleanData(EQ_Data, SO2_Data):
     SO2_Dates = np.zeros(len(SO2_Data['Date']))
+    SO2_Months = np.zeros(len(SO2_Data['Date']))
     for i, data in enumerate(SO2_Data['Date']):
         month = int(data[0:2])
         day = int(data[3:5])
@@ -43,8 +44,11 @@ def cleanData(EQ_Data, SO2_Data):
         # YYYY-MM-DD
         d = datetime.date(year, month, day)
         SO2_Dates[i] = d.toordinal()
-
+        # Store month for seasonality
+        SO2_Months[i] = month
+        
     EQ_Dates = np.zeros(len(EQ_Data['time']))
+    EQ_Months = np.zeros(len(EQ_Data['time']))
     for i, data in enumerate(EQ_Data['time']):
         month = int(data[5:7])
         day = int(data[8:10])
@@ -54,13 +58,20 @@ def cleanData(EQ_Data, SO2_Data):
         # YYYY-MM-DD
         d = datetime.date(year, month, day)
         EQ_Dates[i] = d.toordinal()
+        # Store month for seasonality
+        EQ_Months[i] = month
+
 
     SO2_Data['Date'] = SO2_Dates
     EQ_Data['time'] = EQ_Dates
+    
+    # Add month columns
+    SO2_Data['Month'] = SO2_Months
+    EQ_Data['Month'] = EQ_Months
 
-    EQ_relaventData = EQ_Data[['time','latitude','longitude','mag']]
+    EQ_relaventData = EQ_Data[['time','Month','latitude','longitude','mag']]
     EQ_relaventData.rename(columns={'time' : 'Date'}, inplace=True)
-    SO2_relaventData = SO2_Data[['Date','SITE_LATITUDE','SITE_LONGITUDE','Daily Max 1-hour SO2 Concentration']]
+    SO2_relaventData = SO2_Data[['Date','Month','SITE_LATITUDE','SITE_LONGITUDE','Daily Max 1-hour SO2 Concentration']]
 
     return EQ_relaventData, SO2_relaventData
 
@@ -86,26 +97,36 @@ def mergeData(EQ_Data, SO2_Data, Wind_Data):
 
 def loadFormatWindData():
     # Load Wind Data
-    wind_df = pd.read_csv('Wind_Data.csv')
+    wind_df = pd.read_excel('Wind_Data.xlsx')
 
-    # Drop the time
-    wind_df['Date'] = wind_df['Date'].str.split(' ',expand=True)[0]
+    # # Drop the time
+    # wind_df['Date'] = wind_df['Date'].str.split(' ',expand=True)[0]
 
-    # Convert Date to Number
-    Wind_Dates = np.zeros(len(wind_df['Date']))
-    for i, data in enumerate(wind_df['Date']):
-        month = int(data.split('/')[0])
-        day = int(data.split('/')[1])
-        year = int(data.split('/')[2])
+    # # Convert Date to Number
+    # Wind_Dates = np.zeros(len(wind_df['Date']))
+    # for i, data in enumerate(wind_df['Date']):
+    #     month = int(data.split('/')[0])
+    #     day = int(data.split('/')[1])
+    #     year = int(data.split('/')[2])
         
-        # Store dates as numbers
-        # YYYY-MM-DD
-        d = datetime.date(year, month, day)
-        Wind_Dates[i] = d.toordinal()
+    #     # Store dates as numbers
+    #     # YYYY-MM-DD
+    #     d = datetime.date(year, month, day)
+    #     Wind_Dates[i] = d.toordinal()
 
-    wind_df['Date'] = Wind_Dates
+    # wind_df['Date'] = Wind_Dates
     # Calculate Daily Mean
-    wind_df = wind_df.groupby(['Date'], as_index=False).mean()
+    # wind_df = wind_df.groupby(['Date'], as_index=False).mean()
+    
+    # Add month column
+    Wind_Months = np.zeros(len(wind_df['Date']))
+    for i, data in enumerate(wind_df['Date']):
+        date = datetime.date.fromordinal(data)
+        month = date.month
+        Wind_Months[i] = month
+    
+    # Add month columns
+    wind_df['Month'] = Wind_Months
     return wind_df
 
 def NormalizeLatLongData(MergedData):
@@ -167,19 +188,58 @@ def ClusterData(NormalizedData):
     Clustered_Data = NormalizedData.merge(Compact_Clustered_Data, how = 'left', on = 'Date')
     return Clustered_Data
 
-def split_data(ClusteredData, train_ratio):
+def split_data(ClusteredData, train_ratio, test_ratio):
     
     # Randomely select trainning and testing cluster ids
     clusters_id = ClusteredData["Cluster_ID"].unique()
     n_clusters = clusters_id.shape[0]
     n_train_clusters = int(n_clusters*train_ratio)
+    n_test_clusters = int(n_clusters*test_ratio)
     trainning_clusters = np.random.choice(clusters_id, n_train_clusters, replace = False)
-    testing_clusters = np.setdiff1d(clusters_id, trainning_clusters)
+    test_valid_clusters = np.setdiff1d(clusters_id, trainning_clusters)
+    testing_clusters = np.random.choice(test_valid_clusters, n_test_clusters, replace = False)
+    validation_clusters = np.setdiff1d(test_valid_clusters, testing_clusters)
     
     # Obtain Trainning and Testing Data
-    Trainning_Data = ClusteredData[ClusteredData["Cluster_ID"].isin(testing_clusters) == False]
-    Testing_Data = ClusteredData[ClusteredData["Cluster_ID"].isin(trainning_clusters) == False]
-    return Trainning_Data, Testing_Data
+    Trainning_Data = ClusteredData[ClusteredData["Cluster_ID"].isin(test_valid_clusters) == False]
+    
+    trainning_valid_clusters = np.concatenate((trainning_clusters, validation_clusters), axis=0)
+    Testing_Data = ClusteredData[ClusteredData["Cluster_ID"].isin(trainning_valid_clusters) == False]
+    
+    trainning_testing_clusters = np.concatenate((trainning_clusters, testing_clusters), axis=0)
+    Validation_Data = ClusteredData[ClusteredData["Cluster_ID"].isin(trainning_testing_clusters) == False]
+    
+    return Trainning_Data, Testing_Data, Validation_Data
+
+def AddRiskLabel(ClusteredData):
+    
+    # Green     0 - 100 ppb / Label = 0
+    # Yellow  100 - 200 ppb / Label = 1
+    # Orange  200 - 1000 ppb / Label = 2
+    # Red    1000 - 3000 ppb / Label = 3
+    # Purple 3000 - 5000 ppb / Label = 4
+    # Maroon > 5000 ppb / Label = 5
+    
+    SO2_Labels = np.zeros(len(ClusteredData['Date']))
+    SO2_Values = ClusteredData['Daily Max 1-hour SO2 Concentration'].to_numpy()
+    
+    for i in range(len(SO2_Labels)):
+        if SO2_Values[i] > 5000:
+            SO2_Labels[i] = 5
+        elif SO2_Values[i] > 3000:
+            SO2_Labels[i] = 4
+        elif SO2_Values[i] > 1000:
+            SO2_Labels[i] = 3
+        elif SO2_Values[i] > 200:
+            SO2_Labels[i] = 2
+        elif SO2_Values[i] > 100:
+            SO2_Labels[i] = 1
+        else:
+            SO2_Labels[i] = 0
+        
+    ClusteredData['Risk_Label'] = SO2_Labels
+    
+    return ClusteredData
 
 def main():
     #Load Data
@@ -196,11 +256,16 @@ def main():
     # Cluster data based on Earthquake Activity - No Earthquake Activity
     ClusteredData = ClusterData(MergedData)
     
+    # Cluster data based on Earthquake Activity - No Earthquake Activity
+    LabeledData = AddRiskLabel(ClusteredData)
+    
     # Split Data on Training and Testing Based on Clusters
     # 0.6 - 0.4, trainning - test ratio
-    Trainning_Data, Testing_Data = split_data(ClusteredData, 0.6)
+    Trainning_Data, Testing_Data, Validation_Data = split_data(LabeledData, 0.5, 0.25)
     Trainning_Data.to_csv('Trainning_Data.csv', index = False)
     Testing_Data.to_csv('Testing_Data.csv', index = False)
+    Validation_Data.to_csv('Validation_Data.csv', index = False)
+    
     return
 
 main()
