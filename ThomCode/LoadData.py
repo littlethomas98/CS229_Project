@@ -34,7 +34,7 @@ def loadEQData():
 # Load Weather Data
 def loadWeatherData():
     weatherData = pd.read_csv('Weather Data/MLO Data.csv')
-    weatherData = weatherData.drop(columns = ['Unnamed: 0','YEAR','MONTH','DAY','HOUR','MINUTE'])
+    weatherData = weatherData.drop(columns = ['Unnamed: 0'])
     return weatherData
 
 
@@ -73,10 +73,10 @@ def cleanData(EQ_Data, SO2_Data):
 
 
 #Merge SO2 and EQ data into single dataframe 
-def mergeData(EQ_Data, SO2_Data):
+def mergeData(EQ_Data, SO2_Data, weatherData):
     MergedData = SO2_Data.merge(EQ_Data, how = 'left', on = 'Date')
     MergedData = MergedData.groupby('Date').mean().reset_index()
-    # MergedData = MergedData.merge(weatherData, how = 'left', on = 'Date')
+    MergedData = MergedData.merge(weatherData, on = 'Date')
     MergedData.rename(columns={'SITE_LATITUDE' : 'SO2_lat', 'SITE_LONGITUDE' : 'SO2_long', 'latitude' : 'EQ_lat', 'longitude' : 'EQ_long'}, inplace=True) 
     MergedData['mag'].fillna(0, inplace = True)
     return MergedData
@@ -134,12 +134,11 @@ def main():
     #Load Data
     SO2_Data = loadSO2Data()
     EQ_Data = loadEQData()
-    # Weather_Data = loadWeatherData()
+    Weather_Data = loadWeatherData()
 
     #Clean and Merge Data
     EQ_Data, SO2_Data = cleanData(EQ_Data, SO2_Data)
-    # MergedData = mergeData(EQ_Data, SO2_Data, Weather_Data)
-    MergedData = mergeData(EQ_Data, SO2_Data)
+    MergedData = mergeData(EQ_Data, SO2_Data, Weather_Data)
     CleanMergedData = replaceLatLongwithDistance(MergedData)
 
     #Save and Plot Data

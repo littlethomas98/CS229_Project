@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow import keras 
 from keras import layers
 from sklearn.utils import shuffle
+from sklearn.preprocessing import StandardScaler
 import os
 
 os.chdir('../CS229_Project/ThomCode')
@@ -23,25 +24,15 @@ def importData():
     data = pd.read_csv('CleanMergedData.csv')
 
     ##TODO TEMPORARY############################################
-    data.sort_values(by=['Date'], inplace=True)
+    # data.sort_values(by=['Date'], inplace=True)
 
-    beta = 0.9
-    weightedAvg = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
-    for i in range(1,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
-        weightedAvg[i] = beta * weightedAvg[i-1] + (1-beta) * data['Daily Max 1-hour SO2 Concentration'][i]
-        
-    weightedAvg2 = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
-    avgDays = 30
-    for i in range(avgDays,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
-        weightedAvg2[i] = data['Daily Max 1-hour SO2 Concentration'][i-avgDays:i].mean()
+    # beta = 0.97
+    # weightedAvg = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
+    # for i in range(1,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
+    #     weightedAvg[i] = beta * weightedAvg[i-1] + (1-beta) * data['Daily Max 1-hour SO2 Concentration'][i]
 
-    # plt.plot(data['Date'], data['Daily Max 1-hour SO2 Concentration'])
-    # plt.plot(data['Date'], weightedAvg)
-    plt.plot(data['Date'], weightedAvg2/1000)
-    plt.plot(data['Date'], 7**data['mag']/20000, 'ro', alpha=0.5)
-    plt.ylim([0,0.5])
-    plt.xlim([734138,738155]) ##2011 to 2021
-    plt.show()
+    # plt.plot(data['Date'], weightedAvg/1000)
+    # plt.show()
     ##############################################################################
 
     data = data.to_numpy()
@@ -85,6 +76,19 @@ def splitData(data, train_Frac = 0.7):
 
 
     return mag_train, so2_train, mag_valid, so2_valid, mag_test, so2_test
+
+
+def normalizeData(x_train, x_valid, x_test, y_train, y_valid, y_test):
+    scaler = StandardScaler().fit(x_train)
+    X_train = scaler.transform(x_train)
+    X_valid = scaler.transform(x_valid)
+    X_test = scaler.transform(x_test)
+
+    Y_train = np.log(y_train)
+    Y_valid = np.log(y_valid)
+    Y_test = np.log(y_test)
+
+    return X_train, X_valid, X_test, Y_train, Y_valid, Y_test
 
 
 def createModel(InputShape):

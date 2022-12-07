@@ -10,11 +10,11 @@ os.chdir(r"C:\Users\THom\Documents\GitHub\CS229_Project")
 ##Dataset from: https://gml.noaa.gov/aftp/met/mlo/
 
 ##IMPORT DATA
-datafiles = os.listdir('Weather Data/Mauna Loa Weather Data')
+datafiles = os.listdir('Weather Data/Mauna Loa Weather Data/By Year')
 data = dict()
 for filename in datafiles:
-    if filename != 'SS' and filename != 'ProcessMLOData.py' and filename != 'By Year':
-        data[f'df_{filename}'] = pd.read_csv(f'Weather Data/Mauna Loa Weather Data/{filename}')
+    if filename != 'weather_text_to_csv.py' and filename != 'SS':
+        data[f'df_{filename}'] = pd.read_csv(f'Weather Data/Mauna Loa Weather Data/By Year/{filename}')
 data = pd.concat(data)
 data.rename(columns={'Column1': 'SITE CODE',
                      'Column2': 'YEAR',
@@ -49,5 +49,6 @@ for i in range (data.shape[0]):
 
 
 data['Date'] = Combined_Dates
-data = data.drop(columns = ['WIND STEADINESS FACTOR'])
+data = data.groupby('Date').mean().reset_index()
+data.drop(columns = ['YEAR','MONTH','DAY','HOUR','MINUTE','WIND STEADINESS FACTOR'], inplace=True)
 data.to_csv('Weather Data/MLO Data.csv')
