@@ -81,7 +81,7 @@ def trainModel(x_train, y_train, x_valid, y_valid):
     model.compile(
         optimizer = 'adam',
         loss = 'categorical_crossentropy',
-        metrics = 'accuracy'
+        metrics = [keras.metrics.Accuracy(), keras.metrics.Recall()]
     )
 
     print("Fit model on training data")
@@ -89,7 +89,7 @@ def trainModel(x_train, y_train, x_valid, y_valid):
         x_train,
         y_train,
         batch_size=64,
-        epochs=10,
+        epochs=100,
         validation_data=(x_valid, y_valid),
     )
 
@@ -131,22 +131,12 @@ def testModel(model, x_test, y_test, BV=False):
     predictions = model.predict(x_test)
 
     if not BV:
-        # #Plot 3D data
-        # fig = plt.figure()
-        # ax = fig.add_subplot(projection = '3d')
-        # ax.scatter(x_test[:,0], x_test[:,1], y_test, label = 'Real Data')
-        # ax.scatter(x_test[:,0], x_test[:,1], predictions)
-        # ax.set_xlabel('EQ Magnitude')
-        # ax.set_ylabel('Distance (km)')
-        # ax.set_zlabel('SO2 Concentration (ppm)')
-
-        #Determined that 3rd dimension is not relavent for current analysis, therefore reduce to 2d plot
         plt.figure()
-        line1, line2 = plt.plot(x_test, y_test, 'bo', alpha = 0.2)
-        line3, line4 = plt.plot(x_test, predictions, 'ro', alpha = 0.2, label = 'Predicted Data')
-        plt.legend([line1, line3], ['Real Data', 'Predicted Data'], loc='best')
-        plt.xlabel('Distance (km)')
-        plt.ylabel('SO2 Concentration (ppm)')
+        plt.plot(x_test['Date'], np.argmax(y_test, axis=1), 'bx', markersize=8, alpha = 0.2)
+        plt.plot(x_test['Date'], np.argmax(predictions, axis=1), 'ro', alpha = 0.2, label = 'Predicted Data')
+        plt.legend(['Real Data', 'Predicted Data'], loc='best')
+        plt.xlabel('Date (Noramlized to 2018)')
+        plt.ylabel('SO2 Hazard Level')
         plt.savefig('Predictions.png')
 
     return results
