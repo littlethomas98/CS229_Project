@@ -34,7 +34,6 @@ def loadEQData():
 # Modified to be a code in case leap years exists
 def cleanData(EQ_Data, SO2_Data):
     SO2_Dates = np.zeros(len(SO2_Data['Date']))
-    SO2_Months = np.zeros(len(SO2_Data['Date']))
     for i, data in enumerate(SO2_Data['Date']):
         month = int(data[0:2])
         day = int(data[3:5])
@@ -44,11 +43,9 @@ def cleanData(EQ_Data, SO2_Data):
         # YYYY-MM-DD
         d = datetime.date(year, month, day)
         SO2_Dates[i] = d.toordinal()
-        # Store month for seasonality
-        SO2_Months[i] = month
-        
+
     EQ_Dates = np.zeros(len(EQ_Data['time']))
-    EQ_Months = np.zeros(len(EQ_Data['time']))
+    # EQ_Months = np.zeros(len(EQ_Data['time']))
     for i, data in enumerate(EQ_Data['time']):
         month = int(data[5:7])
         day = int(data[8:10])
@@ -58,29 +55,32 @@ def cleanData(EQ_Data, SO2_Data):
         # YYYY-MM-DD
         d = datetime.date(year, month, day)
         EQ_Dates[i] = d.toordinal()
-        # Store month for seasonality
-        EQ_Months[i] = month
-
 
     SO2_Data['Date'] = SO2_Dates
     EQ_Data['time'] = EQ_Dates
-    
-    # Add month columns
-    SO2_Data['Month'] = SO2_Months
-    EQ_Data['Month'] = EQ_Months
 
-    EQ_relaventData = EQ_Data[['time','Month','latitude','longitude','mag']]
+    EQ_relaventData = EQ_Data[['time','latitude','longitude','mag']]
     EQ_relaventData.rename(columns={'time' : 'Date'}, inplace=True)
-    SO2_relaventData = SO2_Data[['Date','Month','SITE_LATITUDE','SITE_LONGITUDE','Daily Max 1-hour SO2 Concentration']]
+    SO2_relaventData = SO2_Data[['Date','SITE_LATITUDE','SITE_LONGITUDE','Daily Max 1-hour SO2 Concentration']]
 
     return EQ_relaventData, SO2_relaventData
 
 # Merge SO2, Wind and EQ data into single dataframe and delete
 # the first days without earthquakes since they dont matter to us
 def mergeData(EQ_Data, SO2_Data, Wind_Data):
+    # Merge S02 and EQ
     MergedData = SO2_Data.merge(EQ_Data, how = 'left', on = 'Date')
-    MergedData.rename(columns={'SITE_LATITUDE' : 'SO2_lat', 'SITE_LONGITUDE' : 'SO2_long', 'latitude' : 'EQ_lat', 'longitude' : 'EQ_long'}, inplace=True)
-    MergedData = MergedData.merge(Wind_Data, how = 'left', on = 'Date')
+    MergedData.rename(columns={'SITE_LATITUDE' : 'SO2_lat', 'SITE_LONGITUDE' : 'SO2_long', 'latitude' : 'EQ_lat', 'longitude' : 'EQ_long'}, inplace=True) 
+    
+    # Find Wind Dataframe with shared dates to EQ and SO2
+    Wind_temp = MergedData.merge(Wind_Data, how = 'left', on = 'Date')
+    Wind_temp = Wind_temp[['Date', 'WIND DIRECTION', 'WIND SPEED', 'TEMPERATURE AT 2 METERS','RELATIVE HUMIDITY']]
+    Wind_temp = Wind_temp.groupby(['Date'], as_index = False).mean()
+    
+    # Fill Missing Values
+    Wind_temp.interpolate(method ='linear', limit_direction ='forward', inplace = True)
+    
+    MergedData = MergedData.merge(Wind_temp, how = 'left', on = 'Date')
     MergedData['mag'].fillna(0, inplace = True)
     
     # Delete the first rows where there was no previous earthquake
@@ -89,44 +89,12 @@ def mergeData(EQ_Data, SO2_Data, Wind_Data):
     first_non_zero = np.nonzero(magnitudes)[0][0]
     MergedData = MergedData.iloc[first_non_zero: , :]
     
-    # Set first day to Zero
-    first_day = MergedData['Date'].min()
-    MergedData['Date'] = MergedData['Date'] - first_day
-    
     return MergedData
 
 def loadFormatWindData():
     # Load Wind Data
     wind_df = pd.read_excel('Wind_Data.xlsx')
-
-    # # Drop the time
-    # wind_df['Date'] = wind_df['Date'].str.split(' ',expand=True)[0]
-
-    # # Convert Date to Number
-    # Wind_Dates = np.zeros(len(wind_df['Date']))
-    # for i, data in enumerate(wind_df['Date']):
-    #     month = int(data.split('/')[0])
-    #     day = int(data.split('/')[1])
-    #     year = int(data.split('/')[2])
-        
-    #     # Store dates as numbers
-    #     # YYYY-MM-DD
-    #     d = datetime.date(year, month, day)
-    #     Wind_Dates[i] = d.toordinal()
-
-    # wind_df['Date'] = Wind_Dates
-    # Calculate Daily Mean
-    # wind_df = wind_df.groupby(['Date'], as_index=False).mean()
     
-    # Add month column
-    Wind_Months = np.zeros(len(wind_df['Date']))
-    for i, data in enumerate(wind_df['Date']):
-        date = datetime.date.fromordinal(data)
-        month = date.month
-        Wind_Months[i] = month
-    
-    # Add month columns
-    wind_df['Month'] = Wind_Months
     return wind_df
 
 def NormalizeLatLongData(MergedData):
@@ -134,32 +102,26 @@ def NormalizeLatLongData(MergedData):
     # Latitude
     min_SO2_lat = MergedData['SO2_lat'].min()
     min_EQ_lat = MergedData['EQ_lat'].min()
-    min_Wind_lat = MergedData['Wind_lat'].min()
-    min_lat = min(min_SO2_lat, min_EQ_lat, min_Wind_lat)
+    min_lat = min(min_SO2_lat, min_EQ_lat)
     
     max_SO2_lat = MergedData['SO2_lat'].max()
     max_EQ_lat = MergedData['EQ_lat'].max()
-    max_Wind_lat = MergedData['Wind_lat'].max()
-    max_lat = max(max_SO2_lat, max_EQ_lat, max_Wind_lat)
+    max_lat = max(max_SO2_lat, max_EQ_lat)
     
     MergedData['SO2_lat'] = (MergedData['SO2_lat'] - min_lat) / (max_lat - min_lat)
     MergedData['EQ_lat'] = (MergedData['EQ_lat'] - min_lat) / (max_lat - min_lat)
-    MergedData['Wind_lat'] = (MergedData['Wind_lat'] - min_lat) / (max_lat - min_lat)
     
     # Longitude
     min_SO2_long = MergedData['SO2_long'].min()
     min_EQ_long = MergedData['EQ_long'].min()
-    min_Wind_long = MergedData['Wind_long'].min()
-    min_long = min(min_SO2_long, min_EQ_long, min_Wind_long)
+    min_long = min(min_SO2_long, min_EQ_long)
     
     max_SO2_long = MergedData['SO2_long'].max()
     max_EQ_long = MergedData['EQ_long'].max()
-    max_Wind_long = MergedData['Wind_long'].max()
-    max_long = max(max_SO2_long, max_EQ_long, max_Wind_long)
+    max_long = max(max_SO2_long, max_EQ_long)
     
     MergedData['SO2_long'] = (MergedData['SO2_long'] - min_long) / (max_long - min_long)
     MergedData['EQ_long'] = (MergedData['EQ_long'] - min_long) / (max_long - min_long)
-    MergedData['Wind_long'] = (MergedData['Wind_long'] - min_long) / (max_long - min_long)
     
     return MergedData
 
@@ -241,26 +203,49 @@ def AddRiskLabel(ClusteredData):
     
     return ClusteredData
 
+def AddMonth(NormalizedData):
+    
+    NormalizedData.sort_values(by = ['Date'])
+    NormalizedData.reset_index(drop = True, inplace = True)
+    
+    Months = np.zeros(len(NormalizedData['Date']))
+    for i, data in enumerate(NormalizedData['Date']):
+        date = datetime.date.fromordinal(int(data))
+        month = date.month
+        Months[i] = month
+    
+    # Add month columns
+    NormalizedData['Month'] = Months
+    
+    return NormalizedData
+
 def main():
     #Load Data
     SO2_Data = loadSO2Data()
     EQ_Data = loadEQData()
     Wind_Data = loadFormatWindData()
 
-    #Clean and Merge Data
+    #CleanData
     EQ_Data, SO2_Data = cleanData(EQ_Data, SO2_Data)
+    EQ_Data.to_csv('EQ_Data_Clean.csv', index = False)
+    SO2_Data.to_csv('SO2_Data_Clean.csv', index = False)
+    
+    # Fill Wind Missing Values and Merge Data
     MergedData = mergeData(EQ_Data, SO2_Data, Wind_Data)
     # Normalize
     NormalizedData = NormalizeLatLongData(MergedData)
+    # Add Month
+    AddMonthData = AddMonth(NormalizedData)
     
     # Cluster data based on Earthquake Activity - No Earthquake Activity
-    ClusteredData = ClusterData(MergedData)
+    ClusteredData = ClusterData(AddMonthData)
     
-    # Cluster data based on Earthquake Activity - No Earthquake Activity
+    # Add Risk Label
     LabeledData = AddRiskLabel(ClusteredData)
+    LabeledData.to_csv('All_Data.csv', index = False)
     
-    # Split Data on Training and Testing Based on Clusters
-    # 0.6 - 0.4, trainning - test ratio
+    # Split Data on Training, Testing and Validation Based on Clusters
+    # Training, Testing and Validation - 0.5, 0.25, 0.25
     Trainning_Data, Testing_Data, Validation_Data = split_data(LabeledData, 0.5, 0.25)
     Trainning_Data.to_csv('Trainning_Data.csv', index = False)
     Testing_Data.to_csv('Testing_Data.csv', index = False)
