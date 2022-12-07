@@ -26,12 +26,13 @@ def importData():
     ##TODO TEMPORARY############################################
     # data.sort_values(by=['Date'], inplace=True)
 
-    # beta = 0.97
+    # beta = 0.5
     # weightedAvg = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
     # for i in range(1,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
     #     weightedAvg[i] = beta * weightedAvg[i-1] + (1-beta) * data['Daily Max 1-hour SO2 Concentration'][i]
 
     # plt.plot(data['Date'], weightedAvg/1000)
+    # plt.plot(data['Date'], data['mag']/10,'ro')
     # plt.show()
     ##############################################################################
 

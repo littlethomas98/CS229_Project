@@ -27,13 +27,19 @@ def importData():
     """
     
     x_train = pd.read_csv('Raul Code/Trainning_Data.csv')
-    y_train = x_train.pop('Risk_Label')
+    x_train = x_train.dropna()
+    x_train.to_numpy()
+    y_train = tf.one_hot(x_train.pop('Risk_Label'),6)
 
     x_valid = pd.read_csv('Raul Code/Validation_Data.csv')
-    y_valid = x_valid.pop('Risk_Label')
+    x_valid = x_valid.dropna()
+    x_valid.to_numpy()
+    y_valid = tf.one_hot(x_valid.pop('Risk_Label'),6)
 
     x_test = pd.read_csv('Raul Code/Testing_Data.csv')
-    y_test = x_test.pop('Risk_Label')
+    x_test = x_test.dropna()
+    x_test.to_numpy()
+    y_test = tf.one_hot(x_test.pop('Risk_Label'),6)
     
     return x_train, y_train, x_valid, y_valid, x_test, y_test
 
@@ -52,7 +58,7 @@ def createModel(InputShape):
     model.add(layers.Dense(units = 64, activation = 'relu'))
     model.add(layers.Dense(units = 128, activation = 'relu'))
     model.add(layers.Dense(units = 64, activation = 'relu'))
-    model.add(layers.Dense(units = 1))
+    model.add(layers.Dense(units = 6, activation = 'softmax'))
     print(model.summary())
 
     return model
@@ -73,9 +79,9 @@ def trainModel(x_train, y_train, x_valid, y_valid):
 
     model = createModel(x_train.shape[1])
     model.compile(
-        optimizer = keras.optimizers.Adam(),
-        loss = keras.losses.MeanSquaredError(),
-        # metrics = [keras.metrics.mean_squared_error]
+        optimizer = 'adam',
+        loss = 'categorical_crossentropy',
+        metrics = 'accuracy'
     )
 
     print("Fit model on training data")
@@ -125,14 +131,14 @@ def testModel(model, x_test, y_test, BV=False):
     predictions = model.predict(x_test)
 
     if not BV:
-        #Plot 3D data
-        fig = plt.figure()
-        ax = fig.add_subplot(projection = '3d')
-        ax.scatter(x_test[:,0], x_test[:,1], y_test, label = 'Real Data')
-        ax.scatter(x_test[:,0], x_test[:,1], predictions)
-        ax.set_xlabel('EQ Magnitude')
-        ax.set_ylabel('Distance (km)')
-        ax.set_zlabel('SO2 Concentration (ppm)')
+        # #Plot 3D data
+        # fig = plt.figure()
+        # ax = fig.add_subplot(projection = '3d')
+        # ax.scatter(x_test[:,0], x_test[:,1], y_test, label = 'Real Data')
+        # ax.scatter(x_test[:,0], x_test[:,1], predictions)
+        # ax.set_xlabel('EQ Magnitude')
+        # ax.set_ylabel('Distance (km)')
+        # ax.set_zlabel('SO2 Concentration (ppm)')
 
         #Determined that 3rd dimension is not relavent for current analysis, therefore reduce to 2d plot
         plt.figure()
