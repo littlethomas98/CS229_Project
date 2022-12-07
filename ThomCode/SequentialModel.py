@@ -24,15 +24,17 @@ def importData():
     data = pd.read_csv('CleanMergedData.csv')
 
     ##TODO TEMPORARY############################################
-    # data.sort_values(by=['Date'], inplace=True)
+    data.sort_values(by=['Date'], inplace=True)
 
-    # beta = 0.97
-    # weightedAvg = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
-    # for i in range(1,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
-    #     weightedAvg[i] = beta * weightedAvg[i-1] + (1-beta) * data['Daily Max 1-hour SO2 Concentration'][i]
+    beta = 0.97
+    weightedAvg = np.zeros(data['Daily Max 1-hour SO2 Concentration'].shape[0])
+    for i in range(1,data['Daily Max 1-hour SO2 Concentration'].shape[0]):
+        weightedAvg[i] = beta * weightedAvg[i-1] + (1-beta) * data['Daily Max 1-hour SO2 Concentration'][i]
 
-    # plt.plot(data['Date'], weightedAvg/1000)
-    # plt.show()
+    plt.plot(data['Date'], weightedAvg/1000)
+    plt.vlines(x = list(data['Date'][data['mag'] >= 4]), ymin=0, ymax=2, colors='red')
+    plt.ylim([0,0.2])
+    plt.show()
     ##############################################################################
 
     data = data.to_numpy()

@@ -4,10 +4,6 @@ import matplotlib.pyplot as plt
 import datetime
 import os
 
-##TEMPORARY###############
-os.chdir(r"C:\Users\THom\Documents\GitHub\CS229_Project")
-##########################
-
 
 # Load SO2 Data
 def loadSO2Data():

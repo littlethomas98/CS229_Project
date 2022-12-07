@@ -34,8 +34,7 @@ data.rename(columns={'Column1': 'SITE CODE',
                      }, inplace=True)
 
 
-##TAKE DAILY AVERAGES FOR COMPARISON TO OTHER DATA
-
+##Convert Day/Month/Year to standard format for comparison with other datasets
 Combined_Dates = np.zeros(data.shape[0])
 for i in range (data.shape[0]):
     month = data['MONTH'][i]
@@ -46,9 +45,20 @@ for i in range (data.shape[0]):
     # YYYY-MM-DD
     d = datetime.date(year, month, day)
     Combined_Dates[i] = d.toordinal()
-
-
 data['Date'] = Combined_Dates
-data = data.groupby('Date').mean().reset_index()
+
+##Remove all rows with missing values
+data['WIND DIRECTION'] = data['WIND DIRECTION'].replace(-999,np.nan)
+data['WIND SPEED'] = data['WIND SPEED'].replace(-999.9,np.nan)
+data['BAROMETRIC PRESSURE'] = data['BAROMETRIC PRESSURE'].replace(-999.90,np.nan)
+data['TEMPERATURE AT 2 METERS'] = data['TEMPERATURE AT 2 METERS'].replace(-999.9,np.nan)
+data['TEMPERATURE AT 10 METERS'] = data['TEMPERATURE AT 10 METERS'].replace(-999.9,np.nan)
+data['TEMPERATURE AT TOWER TOP'] = data['TEMPERATURE AT TOWER TOP'].replace(-999.9,np.nan)
+data['RELATIVE HUMIDITY'] = data['RELATIVE HUMIDITY'].replace(-99,np.nan)
+data['PRECIPITATION INTENSITY'] = data['PRECIPITATION INTENSITY'].replace(-99,np.nan)
+data.dropna(axis = 'rows', inplace=True)
+
+##Take daily mean of all values
 data.drop(columns = ['YEAR','MONTH','DAY','HOUR','MINUTE','WIND STEADINESS FACTOR'], inplace=True)
+data = data.groupby('Date').mean().reset_index()
 data.to_csv('Weather Data/MLO Data.csv')
