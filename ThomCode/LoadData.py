@@ -17,6 +17,23 @@ def loadSO2Data():
         if filename != 'SS':
             SO2data[f'df_{filename}'] = pd.read_csv(f'SO2 Data/{filename}')
     SO2_Data = pd.concat(SO2data)
+
+    #Replace SO2 concentrations with hazard levels
+    for i in range(SO2_Data.shape[0]):
+        if SO2_Data['Daily Max 1-hour SO2 Concentration'][i] > 5000:
+            SO2_Data['Daily Max 1-hour SO2 Concentration'][i] = 5
+        elif SO2_Data['Daily Max 1-hour SO2 Concentration'][i] > 3000:
+            SO2_Data['Daily Max 1-hour SO2 Concentration'][i] = 4
+        elif SO2_Data['Daily Max 1-hour SO2 Concentration'][i] > 1000:
+            SO2_Data['Daily Max 1-hour SO2 Concentration'][i] = 3
+        elif SO2_Data['Daily Max 1-hour SO2 Concentration'][i] > 200:
+            SO2_Data['Daily Max 1-hour SO2 Concentration'][i] = 2
+        elif SO2_Data['Daily Max 1-hour SO2 Concentration'][i] > 100:
+            SO2_Data['Daily Max 1-hour SO2 Concentration'][i] = 1
+        else: 
+            SO2_Data['Daily Max 1-hour SO2 Concentration'][i] = 0
+
+
     return SO2_Data
 
 
@@ -75,7 +92,7 @@ def cleanData(EQ_Data, SO2_Data):
 #Merge SO2 and EQ data into single dataframe 
 def mergeData(EQ_Data, SO2_Data, weatherData):
     MergedData = SO2_Data.merge(EQ_Data, how = 'left', on = 'Date')
-    MergedData = MergedData.groupby('Date').mean().reset_index()
+    # MergedData = MergedData.groupby('Date').mean().reset_index()
     MergedData = MergedData.merge(weatherData, on = 'Date')
     MergedData.rename(columns={'SITE_LATITUDE' : 'SO2_lat', 'SITE_LONGITUDE' : 'SO2_long', 'latitude' : 'EQ_lat', 'longitude' : 'EQ_long'}, inplace=True) 
     MergedData['mag'].fillna(0, inplace = True)
@@ -83,17 +100,41 @@ def mergeData(EQ_Data, SO2_Data, weatherData):
 
 
 def replaceLatLongwithDistance(MergedData):
-    #Convert degrees to radians
-    lat1 = MergedData['SO2_lat'] / 57.29577951
-    long1 = MergedData['SO2_long'] / 57.29577951
-    lat2 = MergedData['EQ_lat'] / 57.29577951
-    long2 = MergedData['EQ_long'] / 57.29577951
+    #MLO data collectino site:
+    v_lat = 19.5362
+    v_long = -155.5763
+    R = 6371 #Radius of Earth in km
 
-    #Calculate distance in miles
-    distance = 3963.0 * np.arccos((np.sin(lat1) * np.sin(lat2)) + np.cos(lat1) * np.cos(lat2) * np.cos(long2 - long1))
+    #Get latitude and longitude data for earthquake epicenter and SO2 data collection site
+    lat1 = v_lat * np.pi / 180
+    long1 = v_long * np.pi / 180
+    lat2 = MergedData['SO2_lat'] * np.pi / 180
+    long2 = MergedData['SO2_long'] * np.pi / 180
+    lat3 = MergedData['EQ_lat'] * np.pi / 180
+    long3 = MergedData['EQ_long'] * np.pi / 180
 
-    MergedData['Distance'] = distance
+    #Calc distance between SO2 collection site and volcano
+    a_SO2 = np.sin((lat2-lat1)/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin((long2-long1)/2)**2
+    c_SO2 = 2 * np.arctan2(np.sqrt(a_SO2),np.sqrt(1-a_SO2))
+    MergedData['SO2_to_volc_Distance'] = R * c_SO2
+
+    #Calc distance between EQ epicenter and volcano
+    a_EQ = np.sin((lat3-lat1)/2)**2 + np.cos(lat1) * np.cos(lat3) * np.sin((long3-long1)/2)**2
+    c_EQ = 2 * np.arctan2(np.sqrt(a_EQ),np.sqrt(1-a_EQ))
+    MergedData['EQ_to_volc_Distance'] = R * c_EQ
+    
+    #Calculate bearing angle from volcano to SO2 data collection site
+    X = np.cos(lat2) * np.sin(long1-long2)
+    Y = np.cos(lat1) * np.sin(lat2) - np.sin((lat1) * np.cos(lat2) * np.cos(long1-long2))
+    MergedData['SO2_station_bearing_angle'] = -np.arctan2(X,Y) * 180 / np.pi
+    MergedData['SO2_station_bearing_angle'][MergedData['SO2_station_bearing_angle'] < 0] = MergedData['SO2_station_bearing_angle'][MergedData['SO2_station_bearing_angle'] < 0] + 360
     MergedData.drop(['SO2_lat', 'SO2_long', 'EQ_lat', 'EQ_long'], axis = 1, inplace = True)
+
+    #Calculate alignment between bearing angle to SO2 data collection site and wind direction
+    v_SO2_Site = np.array([np.cos(MergedData['SO2_station_bearing_angle'] * np.pi / 180), np.sin(MergedData['SO2_station_bearing_angle'] * np.pi / 180)])
+    v_volcano = np.array([np.cos(MergedData['WIND DIRECTION'] * np.pi / 180), np.sin(MergedData['WIND DIRECTION'] * np.pi / 180)])
+    MergedData['Wind Alignment'] = [np.dot(v_SO2_Site[:,i].T,v_volcano[:,i]) for i in range(MergedData.shape[0])]
+
     return MergedData
 
 
