@@ -11,6 +11,8 @@ os.chdir(r"C:\Users\THom\Documents\GitHub\CS229_Project")
 ##########################
 
 
+
+
 def importData():
     """
     Function: importData
@@ -26,18 +28,21 @@ def importData():
                 so2_test - testing data set - outputs (SO2 hazard levels)
     """
     
-    x_train = pd.read_csv('Raul Code/Trainning_Data.csv')
+    x_train = pd.read_csv('ThomCode/Trainning_Data.csv')
     x_train = x_train.dropna()
+    x_train.drop(['Date','Month'],inplace=True)
     x_train.to_numpy()
     y_train = tf.one_hot(x_train.pop('Risk_Label'),6)
 
-    x_valid = pd.read_csv('Raul Code/Validation_Data.csv')
+    x_valid = pd.read_csv('ThomCode/Validation_Data.csv')
     x_valid = x_valid.dropna()
+    x_valid.drop(['Date','Month'],inplace=True)
     x_valid.to_numpy()
     y_valid = tf.one_hot(x_valid.pop('Risk_Label'),6)
 
-    x_test = pd.read_csv('Raul Code/Testing_Data.csv')
+    x_test = pd.read_csv('ThomCode/Testing_Data.csv')
     x_test = x_test.dropna()
+    x_test.drop(['Date','Month'],inplace=True)
     x_test.to_numpy()
     y_test = tf.one_hot(x_test.pop('Risk_Label'),6)
     
