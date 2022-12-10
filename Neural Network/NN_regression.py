@@ -8,10 +8,6 @@ import contextily as cx
 from sklearn.utils import shuffle
 import os
 
-##TEMPORARY###############
-os.chdir(r"C:\Users\THom\Documents\GitHub\CS229_Project")
-##########################
-
 
 def loadData():
 
