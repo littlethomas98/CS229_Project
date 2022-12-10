@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import contextily as cx
 from sklearn.utils import shuffle
+import seaborn as sns
 import os
 
 ##TEMPORARY###############
@@ -40,17 +41,6 @@ def loadData():
     y_test = data.iloc[valid_len:,2]
     y_test = tf.one_hot(y_test,6)
 
-
-
-    # x_train = data.iloc[:35444,3:]
-    # y_train = data.iloc[:35444,2]
-
-    # x_valid = data.iloc[35444:43564,3:]
-    # y_valid = data.iloc[35444:43564,2]
-
-    # x_test = data.iloc[43564:,3:]
-    # y_test = data.iloc[43564:,2]
-
     return x_train, y_train, x_valid, y_valid, x_test, y_test
 
 
@@ -66,9 +56,11 @@ def createModel(InputShape):
     """    
     model = keras.Sequential()
     model.add(tf.keras.Input(shape = (InputShape,)))
-    model.add(layers.Dense(units = 64, activation = 'relu'))
     model.add(layers.Dense(units = 128, activation = 'relu'))
-    model.add(layers.Dense(units = 64, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
     model.add(layers.Dense(units = 6, activation = 'softmax'))
     print(model.summary())
 
@@ -90,9 +82,9 @@ def trainModel(x_train, y_train, x_valid, y_valid):
 
     model = createModel(x_train.shape[1])
     model.compile(
-        optimizer = 'adam',
+        optimizer = keras.optimizers.Adam(learning_rate=0.001),
         loss = 'categorical_crossentropy',
-        metrics = [keras.metrics.Accuracy()]
+        metrics = [keras.metrics.Accuracy(), keras.metrics.Recall()]
     )
 
     print("Fit model on training data")
@@ -100,13 +92,32 @@ def trainModel(x_train, y_train, x_valid, y_valid):
         x_train,
         y_train,
         batch_size=64,
-        epochs=50,
+        epochs=500,
         validation_data=(x_valid, y_valid),
     )
 
     finalLoss = [history.history['loss'][-1], history.history['val_loss'][-1]]
 
     return model, finalLoss
+
+
+def plot_confusion_matrix(actual, predicted, labels, ds_type):
+    cm = tf.math.confusion_matrix(actual, predicted)
+
+    #Normalize to get percentage:
+    cm /= np.sum(cm)
+
+    ax = sns.heatmap(cm, annot=True, fmt='g')
+    sns.set(rc={'figure.figsize':(12, 12)})
+    sns.set(font_scale=1.4)
+    ax.set_title('Confusion matrix of action recognition for ' + ds_type)
+    ax.set_xlabel('Predicted Action')
+    ax.set_ylabel('Actual Action')
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    plt.savefig('Confusion Matrix')
+    # ax.xaxis.set_ticklabels(labels)
+    # ax.yaxis.set_ticklabels(labels)
 
 
 def testModel(model, x_test, y_test, BV=False):
@@ -130,6 +141,10 @@ def testModel(model, x_test, y_test, BV=False):
     print("Generate predictions")
     predictions = model.predict(x_test)
 
+    #Plot confusion matrix
+    plot_confusion_matrix(np.argmax(y_test,axis=1), np.argmax(predictions,axis=1), [0,1,2,3,4,5], 'testing')
+
+    #Plot data
     if not BV:
         plt.figure()
         x=list(range(0,x_test.shape[0]))
@@ -159,14 +174,16 @@ def biasVar(x_train, so2_train, x_valid, so2_valid, x_test, so2_test):
     trainHist = np.zeros([10,2])
     testHist = np.zeros(10)
 
+
+
     ##Plot training and validation loss with varying 
     for i in range(1,11):
-        x_train_sec = x_train[0:int(i/10 * x_train.shape[0]),:]
-        so2_train_sec = so2_train[0:int(i/10 * so2_train.shape[0])]
-        x_valid_sec = x_valid[0:int(i/10 * x_valid.shape[0]),:]
-        so2_valid_sec = so2_valid[0:int(i/10 * so2_valid.shape[0])]
-        x_test_sec = x_test[0:int(i/10 * x_test.shape[0]),:]
-        so2_test_sec = so2_test[0:int(i/10 * so2_test.shape[0])]
+        x_train_sec = x_train.iloc[0:int(i/10 * x_train.shape[0]),:]
+        so2_train_sec = so2_train.iloc[0:int(i/10 * so2_train.shape[0])]
+        x_valid_sec = x_valid.iloc[0:int(i/10 * x_valid.shape[0]),:]
+        so2_valid_sec = so2_valid.iloc[0:int(i/10 * so2_valid.shape[0])]
+        x_test_sec = x_test.iloc[0:int(i/10 * x_test.shape[0]),:]
+        so2_test_sec = so2_test.iloc[0:int(i/10 * so2_test.shape[0])]
         model, trainLoss = trainModel(x_train_sec, so2_train_sec, x_valid_sec, so2_valid_sec)
         results = testModel(model, x_test_sec, so2_test_sec, BV=True)
         trainHist[i-1] = trainLoss

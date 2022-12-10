@@ -58,9 +58,11 @@ def createModel(InputShape):
     """    
     model = keras.Sequential()
     model.add(tf.keras.Input(shape = (InputShape,)))
-    model.add(layers.Dense(units = 64, activation = 'relu'))
     model.add(layers.Dense(units = 128, activation = 'relu'))
-    model.add(layers.Dense(units = 64, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
+    model.add(layers.Dense(units = 128, activation = 'relu'))
     model.add(layers.Dense(units = 1, activation = 'relu'))
     print(model.summary())
 
@@ -83,7 +85,7 @@ def trainModel(x_train, y_train, x_valid, y_valid):
     model = createModel(x_train.shape[1])
     model.compile(
         optimizer = keras.optimizers.Adam(),
-        loss = 'mean_squared_error',
+        loss = 'mean_absolute_percentage_error',
         # metrics = [keras.metrics.MeanSquaredError()]
     )
 
@@ -92,9 +94,9 @@ def trainModel(x_train, y_train, x_valid, y_valid):
     history = model.fit(
         x_train,
         y_train,
-        batch_size=256,
+        batch_size=128,
         callbacks=[callback],
-        epochs=50,
+        epochs=100,
         validation_data=(x_valid, y_valid),
     )
 
